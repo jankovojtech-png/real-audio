@@ -14,71 +14,87 @@ interface Location {
 }
 
 const LOCATIONS: Location[] = [
-  // Nature
+  // ── Nature ────────────────────────────────────────────────────────────────
   {
-    id: 'knepp',
-    label: 'Knepp Wildland',
-    region: 'England',
-    description: 'Chalk stream & birdsong',
+    id: 'kyoto',
+    label: 'Kyoto',
+    region: 'Japan',
+    description: 'Garden wind & forest edge',
     category: 'nature',
-    timezone: 'Europe/London',
+    timezone: 'Asia/Tokyo',
   },
   {
-    id: 'kisumu',
-    label: 'Dunga Swamp',
-    region: 'Kenya',
-    description: 'Wetland birds & frogs',
+    id: 'reykjavik',
+    label: 'Reykjavík',
+    region: 'Iceland',
+    description: 'Cold coast & sea light',
     category: 'nature',
-    timezone: 'Africa/Nairobi',
+    timezone: 'Atlantic/Reykjavik',
   },
   {
     id: 'alps',
-    label: 'Ortler Glacier',
-    region: 'Alps',
-    description: 'Wind & meltwater',
+    label: 'Alps',
+    region: 'Switzerland',
+    description: 'Alpine meadow & birdsong',
     category: 'nature',
-    timezone: 'Europe/Rome',
+    timezone: 'Europe/Zurich',
   },
   {
-    id: 'scotland',
-    label: 'Gair Wood',
-    region: 'Scotland',
-    description: 'Ancient forest floor',
+    id: 'bergen',
+    label: 'Bergen',
+    region: 'Norway',
+    description: 'Loch, reeds & grey sky',
     category: 'nature',
-    timezone: 'Europe/London',
+    timezone: 'Europe/Oslo',
   },
   {
-    id: 'marseille',
-    label: 'Île de Frioul',
-    region: 'Mediterranean',
-    description: 'Sea & coastal wind',
+    id: 'seattle',
+    label: 'Seattle',
+    region: 'USA',
+    description: 'West Coast forest & birdsong',
+    category: 'nature',
+    timezone: 'America/Los_Angeles',
+  },
+  {
+    id: 'provence',
+    label: 'Provence',
+    region: 'France',
+    description: 'South French countryside',
     category: 'nature',
     timezone: 'Europe/Paris',
   },
-  // Urban
+  // ── Urban ─────────────────────────────────────────────────────────────────
   {
-    id: 'brussels',
-    label: 'Rue de la Poudrière',
-    region: 'Brussels',
-    description: 'City street & traffic',
+    id: 'helsinki',
+    label: 'Helsinki',
+    region: 'Finland',
+    description: 'City park & street noise',
     category: 'urban',
-    timezone: 'Europe/Brussels',
+    timezone: 'Europe/Helsinki',
   },
   {
-    id: 'seoul',
-    label: 'Gusan-dong',
-    region: 'Seoul',
-    description: 'Korean neighbourhood',
+    id: 'lisbon',
+    label: 'Lisbon',
+    region: 'Portugal',
+    description: 'European street & footsteps',
     category: 'urban',
-    timezone: 'Asia/Seoul',
+    timezone: 'Europe/Lisbon',
   },
   {
-    id: 'santamarta',
-    label: 'El Trompito',
-    region: 'Santa Marta',
-    description: 'Colombian city hum',
+    id: 'bangkok',
+    label: 'Bangkok',
+    region: 'Thailand',
+    description: 'East Asian city & traffic',
     category: 'urban',
-    timezone: 'America/Bogota',
+    timezone: 'Asia/Bangkok',
+  },
+  {
+    id: 'edinburgh',
+    label: 'Edinburgh',
+    region: 'Scotland',
+    description: 'Northern city & stone streets',
+    category: 'urban',
+    timezone: 'Europe/London',
   },
 ]
 
@@ -139,7 +155,7 @@ export default function HomePage() {
   const [playState, setPlayState]       = useState<PlayState>('idle')
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [visualizerActive, setVisualizerActive] = useState(false)
-  const [activeId, setActiveId]         = useState<string>('knepp')
+  const [activeId, setActiveId]         = useState<string>('provence')
   const [now, setNow]                   = useState<Date | null>(null)
 
   // Refs that keep action-handler closures honest without re-registering them.
