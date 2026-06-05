@@ -13,6 +13,27 @@ export const dynamic = 'force-dynamic'
 // the closest available match (same feel / region) is used.
 export const STREAMS: Record<string, { url: string; label: string }> = {
   // ─── Nature ──────────────────────────────────────────────────────────────
+  knepp: {
+    url: 'http://locus.creacast.com:9001/knepp_water.mp3',
+    label: 'Knepp Wildland, England',
+  },
+  kisumu: {
+    url: 'http://locus.creacast.com:9001/kisumu_dunga_swamp.mp3',
+    label: 'Dunga Swamp, Kenya',
+  },
+  ortler: {
+    // Original Alps entry — Ortler glacier, Italy/Austria border
+    url: 'http://locus.creacast.com:9001/ortler_end_der_welt_ferner.mp3',
+    label: 'Ortler Glacier, Alps',
+  },
+  scotland: {
+    url: 'http://locus.creacast.com:9001/gair_wood_001.mp3',
+    label: 'Gair Wood, Scotland',
+  },
+  marseille: {
+    url: 'http://locus.creacast.com:9001/marseille_frioul.mp3',
+    label: 'Île de Frioul, Mediterranean',
+  },
   kyoto: {
     // Jeju Island forest edge, Korea — East Asian garden & wind
     url: 'http://locus.creacast.com:9001/jeju_georo.mp3',
@@ -44,6 +65,18 @@ export const STREAMS: Record<string, { url: string; label: string }> = {
     label: 'Sibra, Ariège, France',
   },
   // ─── Urban ───────────────────────────────────────────────────────────────
+  brussels: {
+    url: 'http://locus.creacast.com:9001/bruxelles_rue_de_la_poudriere.mp3',
+    label: 'Rue de la Poudrière, Brussels',
+  },
+  seoul: {
+    url: 'http://locus.creacast.com:9001/seoul_gusan.mp3',
+    label: 'Gusan-dong, Seoul',
+  },
+  santamarta: {
+    url: 'http://locus.creacast.com:9001/santa_marta_trompito_017.mp3',
+    label: 'El Trompito, Santa Marta',
+  },
   helsinki: {
     // Lužánky city park, Brno, Czech Republic — European city park
     url: 'http://locus.creacast.com:9001/brno_luzanky.mp3',

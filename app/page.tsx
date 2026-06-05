@@ -14,7 +14,47 @@ interface Location {
 }
 
 const LOCATIONS: Location[] = [
-  // ── Nature ────────────────────────────────────────────────────────────────
+  // ── Nature (11) ───────────────────────────────────────────────────────────
+  {
+    id: 'knepp',
+    label: 'Knepp Wildland',
+    region: 'England',
+    description: 'Chalk stream & birdsong',
+    category: 'nature',
+    timezone: 'Europe/London',
+  },
+  {
+    id: 'kisumu',
+    label: 'Dunga Swamp',
+    region: 'Kenya',
+    description: 'Wetland birds & frogs',
+    category: 'nature',
+    timezone: 'Africa/Nairobi',
+  },
+  {
+    id: 'ortler',
+    label: 'Ortler Glacier',
+    region: 'Alps',
+    description: 'Wind, ice & silence',
+    category: 'nature',
+    timezone: 'Europe/Rome',
+  },
+  {
+    id: 'scotland',
+    label: 'Gair Wood',
+    region: 'Scotland',
+    description: 'Ancient forest floor',
+    category: 'nature',
+    timezone: 'Europe/London',
+  },
+  {
+    id: 'marseille',
+    label: 'Île de Frioul',
+    region: 'Mediterranean',
+    description: 'Sea & coastal wind',
+    category: 'nature',
+    timezone: 'Europe/Paris',
+  },
   {
     id: 'kyoto',
     label: 'Kyoto',
@@ -63,7 +103,31 @@ const LOCATIONS: Location[] = [
     category: 'nature',
     timezone: 'Europe/Paris',
   },
-  // ── Urban ─────────────────────────────────────────────────────────────────
+  // ── Urban (7) ─────────────────────────────────────────────────────────────
+  {
+    id: 'brussels',
+    label: 'Rue de la Poudrière',
+    region: 'Brussels',
+    description: 'City street & traffic',
+    category: 'urban',
+    timezone: 'Europe/Brussels',
+  },
+  {
+    id: 'seoul',
+    label: 'Gusan-dong',
+    region: 'Seoul',
+    description: 'Korean neighbourhood',
+    category: 'urban',
+    timezone: 'Asia/Seoul',
+  },
+  {
+    id: 'santamarta',
+    label: 'El Trompito',
+    region: 'Santa Marta',
+    description: 'Colombian city hum',
+    category: 'urban',
+    timezone: 'America/Bogota',
+  },
   {
     id: 'helsinki',
     label: 'Helsinki',
