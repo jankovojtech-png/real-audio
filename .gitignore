@@ -7,3 +7,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 tsconfig.tsbuildinfo
+
+# Analytics event log — contains ephemeral session IDs.
+# Not committed. Back up separately if you need history.
+data/

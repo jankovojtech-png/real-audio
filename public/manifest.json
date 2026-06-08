@@ -1,0 +1,23 @@
+{
+  "name": "Real Audio",
+  "short_name": "Real Audio",
+  "description": "Listen to real live ambient sound from places around the world.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080c10",
+  "theme_color": "#080c10",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa-icon/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-icon/512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

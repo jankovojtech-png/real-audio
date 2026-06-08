@@ -1,16 +1,35 @@
 import { type NextRequest } from 'next/server'
 import ffmpeg from 'fluent-ffmpeg'
 import { PassThrough } from 'stream'
+import { execFileSync } from 'child_process'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+// ── FFmpeg availability check ─────────────────────────────────────────────────
+// Runs once per worker process at module load time. If the `ffmpeg` binary is
+// not in PATH, every request returns a 503 with a clear JSON error rather than
+// a cryptic ffmpeg spawn failure.
+const FFMPEG_AVAILABLE = (() => {
+  try {
+    execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' })
+    return true
+  } catch {
+    console.error(
+      '[stream] ERROR: ffmpeg binary not found in PATH. ' +
+      'Install ffmpeg on this server (e.g. apt-get install ffmpeg). ' +
+      'Audio streaming will be unavailable until ffmpeg is installed.',
+    )
+    return false
+  }
+})()
 
 // All streams are from the Locus Sonus open microphone network.
 // Browse the full live map at: http://locusonus.org/soundmap/
 // Sources include both MP3 and Ogg Vorbis Icecast feeds — FFmpeg re-encodes
 // all of them to a consistent MP3 output regardless of input codec.
-// Each stream is probe-verified live. Where an exact city mic does not exist,
-// the closest available match (same feel / region) is used.
+// Last probe-verified: 2026-06-08. All 18 URLs are unique and confirmed live.
+// Where an exact city mic does not exist, the closest active match is used.
 export const STREAMS: Record<string, { url: string; label: string }> = {
   // ─── Nature ──────────────────────────────────────────────────────────────
   knepp: {
@@ -18,11 +37,13 @@ export const STREAMS: Record<string, { url: string; label: string }> = {
     label: 'Knepp Wildland, England',
   },
   kisumu: {
-    url: 'http://locus.creacast.com:9001/kisumu_dunga_swamp.mp3',
-    label: 'Dunga Swamp, Kenya',
+    // Langenholte nature reserve, Zwolle NL — IJssel wetland, reeds & water
+    // Replaces: kisumu_dunga_swamp.mp3 (404 dead as of 2026-06-08)
+    url: 'http://locus.creacast.com:9001/zwolle_nature_reserve_langenholte.mp3',
+    label: 'Langenholte Wetland, Netherlands',
   },
   ortler: {
-    // Original Alps entry — Ortler glacier, Italy/Austria border
+    // Ortler glacier, Italy/Austria border
     url: 'http://locus.creacast.com:9001/ortler_end_der_welt_ferner.mp3',
     label: 'Ortler Glacier, Alps',
   },
@@ -74,8 +95,10 @@ export const STREAMS: Record<string, { url: string; label: string }> = {
     label: 'Gusan-dong, Seoul',
   },
   santamarta: {
-    url: 'http://locus.creacast.com:9001/santa_marta_trompito_017.mp3',
-    label: 'El Trompito, Santa Marta',
+    // r-urban Poplar, East London — multicultural urban neighbourhood
+    // Replaces: santa_marta_trompito_017.mp3 (404 dead as of 2026-06-08)
+    url: 'http://locus.creacast.com:9001/r-urban_poplar.mp3',
+    label: 'r-urban Poplar, London',
   },
   helsinki: {
     // Lužánky city park, Brno, Czech Republic — European city park
@@ -83,14 +106,16 @@ export const STREAMS: Record<string, { url: string; label: string }> = {
     label: 'Lužánky Park, Brno',
   },
   lisbon: {
-    // Rue de la Poudrière, Brussels — European cobbled street
-    url: 'http://locus.creacast.com:9001/bruxelles_rue_de_la_poudriere.mp3',
-    label: 'Rue de la Poudrière, Brussels',
+    // Chania, Crete — coastal Mediterranean city, similar acoustic feel to Lisbon
+    // Replaces: duplicate of brussels (bruxelles_rue_de_la_poudriere.mp3)
+    url: 'http://locus.creacast.com:9001/chania_stream.mp3',
+    label: 'Chania, Crete',
   },
   bangkok: {
-    // Gusan-dong neighbourhood, Seoul — East Asian urban hum
-    url: 'http://locus.creacast.com:9001/seoul_gusan.mp3',
-    label: 'Gusan-dong, Seoul',
+    // FLUCC Wien — Vienna waterside venue, active urban soundscape
+    // Replaces: duplicate of seoul (seoul_gusan.mp3)
+    url: 'http://locus.creacast.com:9001/flucc_wien.mp3',
+    label: 'FLUCC Wien, Vienna',
   },
   edinburgh: {
     // Lancaster city, northern England — northern UK urban texture
@@ -102,10 +127,21 @@ export const STREAMS: Record<string, { url: string; label: string }> = {
 const DEFAULT_ID = 'provence'
 
 export async function GET(request: NextRequest) {
+  if (!FFMPEG_AVAILABLE) {
+    return Response.json(
+      {
+        error: 'ffmpeg_unavailable',
+        message:
+          'FFmpeg is not installed on this server. ' +
+          'Audio streaming requires ffmpeg. ' +
+          'See /docs/DEPLOYMENT.md for setup instructions.',
+      },
+      { status: 503 },
+    )
+  }
+
   const id = request.nextUrl.searchParams.get('id') ?? DEFAULT_ID
   const stream = STREAMS[id] ?? STREAMS[DEFAULT_ID]
-
-  console.log(`[stream] Starting: ${stream.label} (${stream.url})`)
 
   const passThrough = new PassThrough()
 

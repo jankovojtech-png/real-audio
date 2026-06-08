@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Real Audio — Offline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #080c10;
+      color: #334155;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+      padding-top: calc(2rem + env(safe-area-inset-top));
+      text-align: center;
+    }
+
+    .icon {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 1.5rem;
+      opacity: 0.4;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 300;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: rgba(226, 232, 240, 0.75);
+      margin-bottom: 1.25rem;
+    }
+
+    p {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: #475569;
+      line-height: 1.6;
+      max-width: 240px;
+    }
+
+    .hint {
+      margin-top: 0.75rem;
+      font-size: 0.625rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #1e293b;
+    }
+
+    button {
+      margin-top: 2rem;
+      background: transparent;
+      border: 1px solid #1e293b;
+      color: #475569;
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.625rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    button:hover {
+      border-color: #334155;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <!-- Concentric circles icon (matches app identity) -->
+  <svg class="icon" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="28" cy="28" r="25" stroke="rgba(99,102,241,0.2)" stroke-width="0.8"/>
+    <circle cx="28" cy="28" r="18" stroke="rgba(99,102,241,0.35)" stroke-width="0.8"/>
+    <circle cx="28" cy="28" r="11" stroke="rgba(99,102,241,0.55)" stroke-width="1"/>
+    <circle cx="28" cy="28" r="3.5" fill="rgba(99,102,241,0.7)"/>
+  </svg>
+
+  <h1>Real Audio</h1>
+  <p>Real Audio needs internet to stream live sound.</p>
+  <p class="hint">Check your connection and try again</p>
+
+  <button onclick="window.location.reload()">Retry</button>
+</body>
+</html>

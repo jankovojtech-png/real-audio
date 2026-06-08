@@ -1,0 +1,290 @@
+{
+  "project": {
+    "name": "Real Audio",
+    "version": "1.0.0",
+    "description": "Live ambient audio streaming — real open-microphone feeds from global locations",
+    "repository": "https://github.com/jankovojtech-png/real-audio",
+    "audit_date": "2026-06-08",
+    "stage": "MVP — functional, not production-ready",
+    "total_source_lines": 760,
+    "total_source_files": 2
+  },
+
+  "stack": {
+    "framework": { "name": "Next.js", "version": "^16.2.7", "pattern": "App Router" },
+    "language": { "name": "TypeScript", "version": "^6.0.3" },
+    "runtime": { "name": "Node.js", "version": ">=18", "notes": "Edge runtime NOT used — fluent-ffmpeg requires Node" },
+    "ui_library": { "name": "React", "version": "^19.2.7" },
+    "styling": { "name": "Tailwind CSS", "version": "^4.3.0", "processor": "@tailwindcss/postcss ^4.3.0" },
+    "audio_lib": { "name": "fluent-ffmpeg", "version": "^2.1.3", "status": "DEPRECATED — no security patches" },
+    "binary_dependency": { "name": "FFmpeg", "source": "OS binary — must be pre-installed", "not_in_npm": true },
+    "linter": { "name": "ESLint", "version": "^9.39.4", "extends": ["next/core-web-vitals", "next/typescript"] }
+  },
+
+  "files": [
+    {
+      "path": "app/page.tsx",
+      "type": "react_client_component",
+      "lines": 607,
+      "responsibility": "Entire frontend: UI, audio state, Media Session API, clock, location list",
+      "critical": true,
+      "exports": ["default HomePage"],
+      "key_symbols": [
+        "LOCATIONS",
+        "CATEGORY_META",
+        "ARTWORK",
+        "makeSvgArtwork",
+        "formatLocalTime",
+        "destroyAudio",
+        "HomePage",
+        "startStream",
+        "stopStream",
+        "handleToggle",
+        "handleLocationSelect"
+      ],
+      "state": ["playState", "errorMessage", "visualizerActive", "activeId", "now"],
+      "refs": ["audioRef", "activeIdRef", "playStateRef"],
+      "effects": ["clock", "mediaSessionMetadata", "mediaSessionHandlers", "unmountCleanup"]
+    },
+    {
+      "path": "app/api/stream/route.ts",
+      "type": "nextjs_route_handler",
+      "lines": 137,
+      "responsibility": "Entire backend: FFmpeg stream proxy from Locus Sonus to browser",
+      "critical": true,
+      "exports": ["GET", "STREAMS", "runtime", "dynamic"],
+      "key_symbols": ["STREAMS", "DEFAULT_ID", "GET"],
+      "runtime_directive": "nodejs",
+      "cache_directive": "force-dynamic",
+      "endpoint": "GET /api/stream?id=:id"
+    },
+    {
+      "path": "app/layout.tsx",
+      "type": "nextjs_root_layout",
+      "lines": 18,
+      "responsibility": "HTML shell, global CSS import, page metadata",
+      "critical": false
+    },
+    {
+      "path": "app/globals.css",
+      "type": "css",
+      "lines": 1,
+      "responsibility": "Imports Tailwind CSS (@import 'tailwindcss')",
+      "critical": false
+    },
+    {
+      "path": "next.config.ts",
+      "type": "nextjs_config",
+      "lines": 7,
+      "responsibility": "serverExternalPackages: ['fluent-ffmpeg'] — prevents bundling failure",
+      "critical": true
+    },
+    {
+      "path": "package.json",
+      "type": "npm_manifest",
+      "lines": 30,
+      "responsibility": "Dependencies, scripts",
+      "critical": true
+    },
+    {
+      "path": "tsconfig.json",
+      "type": "typescript_config",
+      "lines": 30,
+      "responsibility": "strict: true, bundler moduleResolution, paths alias @/*",
+      "critical": false
+    },
+    {
+      "path": "postcss.config.mjs",
+      "type": "postcss_config",
+      "lines": 7,
+      "responsibility": "Tailwind v4 PostCSS plugin",
+      "critical": false
+    },
+    {
+      "path": "eslint.config.mjs",
+      "type": "eslint_config",
+      "lines": 14,
+      "responsibility": "Flat ESLint config for Next.js + TypeScript",
+      "critical": false
+    },
+    {
+      "path": ".gitignore",
+      "type": "git_config",
+      "lines": 9,
+      "responsibility": "Excludes node_modules, .next, build artifacts, .env files",
+      "critical": false
+    },
+    {
+      "path": "next-env.d.ts",
+      "type": "typescript_declaration",
+      "lines": 3,
+      "responsibility": "Auto-generated Next.js TypeScript environment types — DO NOT EDIT",
+      "critical": false
+    }
+  ],
+
+  "locations": [
+    { "id": "knepp",      "label": "Knepp Wildland",       "region": "England",       "category": "nature", "timezone": "Europe/London",            "source_url": "http://locus.creacast.com:9001/knepp_water.mp3" },
+    { "id": "kisumu",     "label": "Dunga Swamp",           "region": "Kenya",         "category": "nature", "timezone": "Africa/Nairobi",            "source_url": "http://locus.creacast.com:9001/kisumu_dunga_swamp.mp3" },
+    { "id": "ortler",     "label": "Ortler Glacier",        "region": "Alps",          "category": "nature", "timezone": "Europe/Rome",              "source_url": "http://locus.creacast.com:9001/ortler_end_der_welt_ferner.mp3" },
+    { "id": "scotland",   "label": "Gair Wood",             "region": "Scotland",      "category": "nature", "timezone": "Europe/London",            "source_url": "http://locus.creacast.com:9001/gair_wood_001.mp3" },
+    { "id": "marseille",  "label": "Île de Frioul",         "region": "Mediterranean", "category": "nature", "timezone": "Europe/Paris",             "source_url": "http://locus.creacast.com:9001/marseille_frioul.mp3" },
+    { "id": "kyoto",      "label": "Kyoto",                 "region": "Japan",         "category": "nature", "timezone": "Asia/Tokyo",               "source_url": "http://locus.creacast.com:9001/jeju_georo.mp3", "note": "Actual source: Jeju Island, Korea" },
+    { "id": "reykjavik",  "label": "Reykjavík",             "region": "Iceland",       "category": "nature", "timezone": "Atlantic/Reykjavik",       "source_url": "http://locus.creacast.com:9001/falmouth__school_of_art.mp3", "note": "Actual source: Falmouth, Cornwall UK" },
+    { "id": "alps",       "label": "Alps",                  "region": "Switzerland",   "category": "nature", "timezone": "Europe/Zurich",            "source_url": "http://locus.creacast.com:9001/bern_holli_der_hof.ogg" },
+    { "id": "bergen",     "label": "Bergen",                "region": "Norway",        "category": "nature", "timezone": "Europe/Oslo",              "source_url": "http://locus.creacast.com:9001/dumfries_and_galloway_loch_patrick.mp3", "note": "Actual source: Loch Patrick, Scotland" },
+    { "id": "seattle",    "label": "Seattle",               "region": "USA",           "category": "nature", "timezone": "America/Los_Angeles",      "source_url": "http://locus.creacast.com:9001/jasper_ridge_birdcast.mp3", "note": "Actual source: Jasper Ridge, Stanford CA" },
+    { "id": "provence",   "label": "Provence",              "region": "France",        "category": "nature", "timezone": "Europe/Paris",             "source_url": "http://locus.creacast.com:9001/sibra_manoir_bruit.ogg", "is_default": true },
+    { "id": "brussels",   "label": "Rue de la Poudrière",   "region": "Brussels",      "category": "urban",  "timezone": "Europe/Brussels",          "source_url": "http://locus.creacast.com:9001/bruxelles_rue_de_la_poudriere.mp3" },
+    { "id": "seoul",      "label": "Gusan-dong",            "region": "Seoul",         "category": "urban",  "timezone": "Asia/Seoul",               "source_url": "http://locus.creacast.com:9001/seoul_gusan.mp3" },
+    { "id": "santamarta", "label": "El Trompito",           "region": "Santa Marta",   "category": "urban",  "timezone": "America/Bogota",           "source_url": "http://locus.creacast.com:9001/santa_marta_trompito_017.mp3" },
+    { "id": "helsinki",   "label": "Helsinki",              "region": "Finland",       "category": "urban",  "timezone": "Europe/Helsinki",          "source_url": "http://locus.creacast.com:9001/brno_luzanky.mp3", "note": "Actual source: Lužánky Park, Brno, Czech Republic" },
+    { "id": "lisbon",     "label": "Lisbon",                "region": "Portugal",      "category": "urban",  "timezone": "Europe/Lisbon",            "source_url": "http://locus.creacast.com:9001/bruxelles_rue_de_la_poudriere.mp3", "WARNING": "DUPLICATE URL — same as 'brussels'" },
+    { "id": "bangkok",    "label": "Bangkok",               "region": "Thailand",      "category": "urban",  "timezone": "Asia/Bangkok",             "source_url": "http://locus.creacast.com:9001/seoul_gusan.mp3", "WARNING": "DUPLICATE URL — same as 'seoul'" },
+    { "id": "edinburgh",  "label": "Edinburgh",             "region": "Scotland",      "category": "urban",  "timezone": "Europe/London",            "source_url": "http://locus.creacast.com:9001/lancaster_ck-flor.mp3", "note": "Actual source: Lancaster, England" }
+  ],
+
+  "apis": [
+    {
+      "method": "GET",
+      "path": "/api/stream",
+      "file": "app/api/stream/route.ts",
+      "auth": "none",
+      "params": [{ "name": "id", "type": "string", "required": false, "default": "provence" }],
+      "response": "audio/mpeg (infinite chunked)",
+      "ffmpeg_flags": ["-reconnect 1", "-reconnect_streamed 1", "-reconnect_delay_max 5", "-icy 0", "-vn", "-c:a libmp3lame", "-b:a 128k", "-f mp3"],
+      "cleanup": "request.signal abort → SIGKILL + PassThrough.destroy()"
+    }
+  ],
+
+  "dependencies": {
+    "runtime": [
+      { "name": "next",         "version": "^16.2.7", "purpose": "Framework" },
+      { "name": "react",        "version": "^19.2.7", "purpose": "UI library" },
+      { "name": "react-dom",    "version": "^19.2.7", "purpose": "React DOM renderer" },
+      { "name": "fluent-ffmpeg","version": "^2.1.3",  "purpose": "FFmpeg Node.js binding", "status": "DEPRECATED" }
+    ],
+    "dev": [
+      { "name": "@tailwindcss/postcss", "version": "^4.3.0",  "purpose": "Tailwind v4 PostCSS plugin" },
+      { "name": "@types/fluent-ffmpeg", "version": "^2.1.28", "purpose": "TypeScript types for fluent-ffmpeg" },
+      { "name": "@types/node",          "version": "^25.9.1",  "purpose": "Node.js TypeScript types" },
+      { "name": "@types/react",         "version": "^19.2.16", "purpose": "React TypeScript types" },
+      { "name": "@types/react-dom",     "version": "^19.2.3",  "purpose": "ReactDOM TypeScript types" },
+      { "name": "eslint",               "version": "^9.39.4",  "purpose": "Linter" },
+      { "name": "eslint-config-next",   "version": "^16.2.7",  "purpose": "Next.js ESLint rules" },
+      { "name": "postcss",              "version": "^8.5.15",  "purpose": "CSS processor" },
+      { "name": "tailwindcss",          "version": "^4.3.0",   "purpose": "Utility-first CSS" },
+      { "name": "typescript",           "version": "^6.0.3",   "purpose": "Type system" }
+    ],
+    "external_services": [
+      {
+        "name": "Locus Sonus",
+        "url": "http://locus.creacast.com:9001",
+        "purpose": "All 18 audio streams",
+        "cost": "Free (volunteer art project)",
+        "sla": "None",
+        "criticality": "CRITICAL — single point of failure"
+      }
+    ],
+    "os_binary": [
+      {
+        "name": "FFmpeg",
+        "purpose": "Audio transcoding",
+        "install": "apt-get install ffmpeg / brew install ffmpeg / choco install ffmpeg",
+        "not_in_npm": true,
+        "criticality": "CRITICAL — app silently fails without it"
+      }
+    ]
+  },
+
+  "features": {
+    "implemented": [
+      "live_audio_streaming", "18_locations", "nature_urban_categories",
+      "category_adaptive_theme", "seamless_location_switching", "live_local_clock",
+      "web_media_session_api", "hardware_controls", "svg_lock_screen_artwork",
+      "pulsing_visualizer", "safe_audio_teardown", "retry_on_error",
+      "accessibility_aria", "ssr_safe_hydration", "ffmpeg_reconnect",
+      "client_disconnect_cleanup", "dark_ambient_theme"
+    ],
+    "not_implemented": [
+      "user_accounts", "authentication", "favourites", "listening_history",
+      "database", "volume_control", "sleep_timer", "pwa_manifest",
+      "stream_health_monitoring", "rate_limiting", "error_tracking",
+      "analytics", "cicd_pipeline", "audio_visualizer_bars",
+      "search_filter", "subscription_payments", "mobile_apps"
+    ]
+  },
+
+  "known_issues": [
+    {
+      "id": "BUG-01",
+      "severity": "high",
+      "description": "Lisbon and Brussels share the same source URL — users hear identical audio",
+      "file": "app/api/stream/route.ts",
+      "fix": "Find and assign a unique Locus Sonus stream to 'lisbon'"
+    },
+    {
+      "id": "BUG-02",
+      "severity": "high",
+      "description": "Bangkok and Seoul share the same source URL — users hear identical audio",
+      "file": "app/api/stream/route.ts",
+      "fix": "Find and assign a unique Locus Sonus stream to 'bangkok'"
+    },
+    {
+      "id": "BUG-03",
+      "severity": "critical",
+      "description": "No rate limiting — unlimited FFmpeg processes can be spawned per client",
+      "file": "app/api/stream/route.ts",
+      "fix": "Add Next.js middleware or in-memory rate limiter"
+    },
+    {
+      "id": "BUG-04",
+      "severity": "critical",
+      "description": "FFmpeg binary not documented as required host dependency",
+      "file": "package.json, README (missing)",
+      "fix": "Add README; add startup check in route.ts"
+    }
+  ],
+
+  "security": {
+    "score": "3/10",
+    "auth": "none",
+    "rate_limiting": "none",
+    "cors": "Access-Control-Allow-Origin: *",
+    "csp": "none",
+    "pii_collected": false,
+    "secrets_in_code": false,
+    "deprecated_packages": ["fluent-ffmpeg"]
+  },
+
+  "infrastructure": {
+    "hosting": "none_live",
+    "planned_hosting": "Render.com",
+    "ci_cd": "none",
+    "monitoring": "none",
+    "error_tracking": "none",
+    "analytics": "none",
+    "database": "none",
+    "cdn": "none"
+  },
+
+  "scalability": {
+    "model": "one_ffmpeg_process_per_client",
+    "concurrent_limit_estimate": "~50 users on single 1-core server",
+    "bottleneck": "CPU and RAM per FFmpeg process",
+    "fix_required_at": "100+ concurrent users",
+    "fix": "Stream multiplexing — share one FFmpeg output per stream ID"
+  },
+
+  "mermaid_diagrams": {
+    "system_architecture": "ARCHITECTURE.md#system-architecture-diagram",
+    "request_lifecycle": "ARCHITECTURE.md#request-lifecycle",
+    "streaming_pipeline": "ARCHITECTURE.md#sound-streaming-architecture",
+    "first_launch_flow": "HANDOVER.md#first-launch",
+    "location_switching_flow": "HANDOVER.md#location-switching",
+    "media_session_flow": "HANDOVER.md#lock-screen--car-control",
+    "er_diagram": "DATABASE.md#entity-relationship-diagram",
+    "deployment_flow": "ARCHITECTURE.md#infrastructure",
+    "roadmap_gantt": "ROADMAP.md#gantt"
+  }
+}

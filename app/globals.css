@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+/*
+ * Safe area support for standalone PWA mode on iOS.
+ * Ensures content never hides behind the home indicator or notch.
+ * Requires viewport-fit=cover (set in layout.tsx viewport export).
+ */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
