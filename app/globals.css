@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Live marker pulse — used in WorldMap via inline animation style */
+@keyframes ra-pulse {
+  0%   { transform: scale(0.8); opacity: 0.75; }
+  100% { transform: scale(2.8); opacity: 0;    }
+}
+
 /*
  * Safe area support for standalone PWA mode on iOS.
  * Ensures content never hides behind the home indicator or notch.

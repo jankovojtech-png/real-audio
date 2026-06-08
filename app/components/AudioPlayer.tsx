@@ -12,8 +12,8 @@ const WorldMap = dynamic(() => import('./WorldMap'), {
   ssr:     false,
   loading: () => (
     <div
-      className="w-full rounded-lg animate-pulse"
-      style={{ background: '#05080d', aspectRatio: '800 / 410' }}
+      className="w-full rounded-xl animate-pulse"
+      style={{ background: '#030810', aspectRatio: '800 / 500' }}
     />
   ),
 })
@@ -483,7 +483,9 @@ export default function AudioPlayer({ initialId }: Props) {
         </div>
       )}
 
-      <div className="relative z-10 flex flex-col items-center gap-7 w-full max-w-[280px]">
+      <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-2xl">
+        {/* Controls — kept narrow and centered */}
+        <div className="w-full max-w-[280px] flex flex-col items-center gap-7">
         {/* Title + share button */}
         <div className="relative w-full flex flex-col items-center gap-1.5">
           <h1 className="text-2xl font-light tracking-[0.35em] text-slate-100/90 uppercase">
@@ -655,7 +657,9 @@ export default function AudioPlayer({ initialId }: Props) {
           )}
         </div>
 
-        {/* World map */}
+        </div>
+
+        {/* World map — full card width */}
         <WorldMap
           locations={LOCATIONS}
           activeId={activeId}
