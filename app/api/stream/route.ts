@@ -13,10 +13,11 @@ export const dynamic = 'force-dynamic'
 const FFMPEG_AVAILABLE = (() => {
   try {
     execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' })
+    console.log('[stream] startup: ffmpeg binary found in PATH')
     return true
   } catch {
     console.error(
-      '[stream] ERROR: ffmpeg binary not found in PATH. ' +
+      '[stream] FATAL: ffmpeg binary not found in PATH. ' +
       'Install ffmpeg on this server (e.g. apt-get install ffmpeg). ' +
       'Audio streaming will be unavailable until ffmpeg is installed.',
     )
@@ -28,7 +29,7 @@ const FFMPEG_AVAILABLE = (() => {
 // Browse the full live map at: http://locusonus.org/soundmap/
 // Sources include both MP3 and Ogg Vorbis Icecast feeds — FFmpeg re-encodes
 // all of them to a consistent MP3 output regardless of input codec.
-// Last probe-verified: 2026-06-08. All 18 URLs are unique and confirmed live.
+// Last probe-verified: 2026-06-09. All 18 URLs confirmed live from local.
 // Where an exact city mic does not exist, the closest active match is used.
 export const STREAMS: Record<string, { url: string; label: string }> = {
   // ─── Nature ──────────────────────────────────────────────────────────────
@@ -126,8 +127,38 @@ export const STREAMS: Record<string, { url: string; label: string }> = {
 
 const DEFAULT_ID = 'provence'
 
+// ── Stderr filter ─────────────────────────────────────────────────────────────
+// FFmpeg writes all diagnostic output to stderr (even normal progress lines).
+// Only forward lines that signal a connection problem, HTTP error, or hard
+// failure — everything else is routine format/codec info that clutters logs.
+const STDERR_SIGNAL_WORDS = [
+  'error', 'failed', 'failure', 'refused', 'timeout', 'timed out',
+  'server returned', 'no route', 'unreachable', 'broken pipe',
+  'unable to', 'invalid data', 'no such', 'connection', 'forbidden',
+  '401', '403', '404', '503',
+]
+function isSignificantStderr(line: string): boolean {
+  const lc = line.toLowerCase()
+  return STDERR_SIGNAL_WORDS.some((w) => lc.includes(w))
+}
+
 export async function GET(request: NextRequest) {
+  const t0      = Date.now()
+  const ms      = () => `+${Date.now() - t0}ms`
+  const tag     = (id: string) => `[stream:${id}]`
+
+  const rawId      = request.nextUrl.searchParams.get('id') ?? DEFAULT_ID
+  const resolvedId = STREAMS[rawId] ? rawId : DEFAULT_ID
+  const stream     = STREAMS[resolvedId]
+
+  // ── Log every inbound request ──────────────────────────────────────────────
+  console.log(
+    `${tag(resolvedId)} request  ffmpeg=${FFMPEG_AVAILABLE}` +
+    `  url="${stream.url}"`,
+  )
+
   if (!FFMPEG_AVAILABLE) {
+    console.error(`${tag(resolvedId)} abort  reason=ffmpeg_unavailable  t=${ms()}`)
     return Response.json(
       {
         error: 'ffmpeg_unavailable',
@@ -140,10 +171,8 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const id = request.nextUrl.searchParams.get('id') ?? DEFAULT_ID
-  const stream = STREAMS[id] ?? STREAMS[DEFAULT_ID]
-
-  const passThrough = new PassThrough()
+  const passThrough   = new PassThrough()
+  let   firstByteSent = false
 
   const command = ffmpeg(stream.url)
     .inputOptions([
@@ -156,38 +185,68 @@ export async function GET(request: NextRequest) {
     .audioCodec('libmp3lame')
     .audioBitrate(128)
     .format('mp3')
-    .on('error', (err: Error) => {
-      console.error(`[stream] FFmpeg error (${id}):`, err.message)
-      if (!passThrough.destroyed) {
-        passThrough.destroy(err)
+    // ── Lifecycle events ────────────────────────────────────────────────────
+    .on('start', (cmdLine: string) => {
+      // Log the resolved command so we can confirm ffmpeg actually started.
+      // Trim to keep log lines readable — full path + all flags can be long.
+      const short = cmdLine.length > 200 ? cmdLine.slice(0, 200) + '…' : cmdLine
+      console.log(`${tag(resolvedId)} ffmpeg spawned  t=${ms()}  cmd="${short}"`)
+    })
+    .on('stderr', (line: string) => {
+      // Only surface stderr lines that signal a real problem (see filter above).
+      if (isSignificantStderr(line)) {
+        console.warn(`${tag(resolvedId)} ffmpeg stderr  t=${ms()}  "${line.trim()}"`)
       }
     })
-    .on('end', () => {
-      if (!passThrough.destroyed) {
-        passThrough.end()
+    .on('error', (err: Error) => {
+      // This fires on ffmpeg process error OR when the process is killed.
+      // Killed-on-disconnect produces "ffmpeg was killed with signal SIGKILL"
+      // which is expected — no need to treat it as an alert.
+      const msg = err.message ?? String(err)
+      if (msg.includes('SIGKILL') || msg.includes('SIGTERM')) {
+        console.log(`${tag(resolvedId)} ffmpeg killed  t=${ms()}  "${msg}"`)
+      } else {
+        console.error(`${tag(resolvedId)} ffmpeg error  t=${ms()}  "${msg}"`)
       }
+      if (!passThrough.destroyed) passThrough.destroy(err)
+    })
+    .on('end', () => {
+      // Clean end — source stream closed normally (rare for Icecast; means the
+      // microphone feed stopped or the Icecast server terminated the session).
+      console.log(`${tag(resolvedId)} ffmpeg end  t=${ms()}`)
+      if (!passThrough.destroyed) passThrough.end()
     })
 
   command.pipe(passThrough, { end: true })
 
+  // ── Client disconnect ──────────────────────────────────────────────────────
   request.signal.addEventListener('abort', () => {
+    console.log(`${tag(resolvedId)} client disconnected  t=${ms()}`)
     command.kill('SIGKILL')
     passThrough.destroy()
   })
 
+  // ── Readable stream piped to HTTP response ─────────────────────────────────
   const readableStream = new ReadableStream({
     start(controller) {
       passThrough.on('data', (chunk: Buffer) => {
+        if (!firstByteSent) {
+          firstByteSent = true
+          // This is the most important timing signal: how long from request
+          // to the client receiving its first audio byte.
+          console.log(
+            `${tag(resolvedId)} first byte  t=${ms()}  size=${chunk.length}B`,
+          )
+        }
         controller.enqueue(chunk)
       })
-      passThrough.on('end', () => {
-        controller.close()
-      })
-      passThrough.on('error', (err: Error) => {
-        controller.error(err)
-      })
+      passThrough.on('end',   ()           => { controller.close() })
+      passThrough.on('error', (err: Error) => { controller.error(err) })
     },
     cancel() {
+      // Browser closed the connection before we finished (e.g. user navigated
+      // away). This is normal and should not appear as an error.
+      console.log(`${tag(resolvedId)} stream cancelled  t=${ms()}`)
       command.kill('SIGKILL')
       passThrough.destroy()
     },
@@ -195,9 +254,9 @@ export async function GET(request: NextRequest) {
 
   return new Response(readableStream, {
     headers: {
-      'Content-Type': 'audio/mpeg',
-      'Transfer-Encoding': 'chunked',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Content-Type':           'audio/mpeg',
+      'Transfer-Encoding':      'chunked',
+      'Cache-Control':          'no-cache, no-store, must-revalidate',
       'X-Content-Type-Options': 'nosniff',
       'Access-Control-Allow-Origin': '*',
     },

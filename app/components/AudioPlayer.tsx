@@ -39,7 +39,9 @@ const HEALTH_BADGE: Record<
 // ─── Retry / timeout constants ────────────────────────────────────────────────
 const MAX_RETRIES  = 3
 const RETRY_DELAY  = 2_000   // ms between retry attempts
-const LOAD_TIMEOUT = 8_000   // ms to wait for first audio data before retrying
+const LOAD_TIMEOUT = 15_000  // ms to wait for first audio data before retrying
+                             // 15s covers Render cold-start (~3s) + ffmpeg spawn (~1s)
+                             // + Icecast connect (~1s) + transcode buffer (~2s)
 
 // ─── Sleep timer constants ─────────────────────────────────────────────────────
 const SLEEP_OPTIONS = [15, 30, 60, 90] as const
