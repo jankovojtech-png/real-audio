@@ -111,8 +111,13 @@ export default function AudioPlayer({ initialId }: Props) {
   const sleepEndsAtRef     = useRef<number | null>(null)
   const sleepIntervalRef   = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
   const shareFeedbackRef   = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const playStartedAtRef   = useRef<number | null>(null)
-  const playingLocationRef = useRef<string>('')
+  const playStartedAtRef      = useRef<number | null>(null)
+  const playingLocationRef    = useRef<string>('')
+  // True whenever the user has expressed intent to listen.
+  // Survives loading → error → offline transitions so that tapping a new
+  // location immediately starts playback without requiring a scroll-to-top.
+  // Reset to false only on explicit Stop / Cancel.
+  const userWantsPlaybackRef  = useRef(false)
 
   const [playState,        setPlayState]        = useState<PlayState>('idle')
   const [errorMessage,     setErrorMessage]     = useState<string>('')
@@ -166,6 +171,7 @@ export default function AudioPlayer({ initialId }: Props) {
       destroyAudio(audioRef.current)
       audioRef.current = null
     }
+    userWantsPlaybackRef.current = false
     setPlayState('idle')
     setVisualizerActive(false)
   }, [])
@@ -226,6 +232,14 @@ export default function AudioPlayer({ initialId }: Props) {
           'This live microphone is temporarily offline. Try another location.',
         )
         setVisualizerActive(false)
+        // Pause sleep timer — nothing is playing so countdown is meaningless.
+        // userWantsPlaybackRef stays true so the next location tap resumes.
+        clearInterval(sleepIntervalRef.current)
+        sleepIntervalRef.current = undefined
+        sleepEndsAtRef.current   = null
+        setSleepMinutes(null)
+        setSleepSecondsLeft(null)
+        if (audioRef.current) audioRef.current.volume = 1
         // Track any listening time that occurred before the final failure
         if (playStartedAtRef.current !== null) {
           const dur = Math.round((Date.now() - playStartedAtRef.current) / 1_000)
@@ -297,13 +311,16 @@ export default function AudioPlayer({ initialId }: Props) {
     const switchTo = (id: string) => {
       activeIdRef.current = id
       setActiveId(id)
-      if (playStateRef.current === 'playing' || playStateRef.current === 'loading') {
+      if (userWantsPlaybackRef.current) {
         startStream(id)
       }
     }
 
-    navigator.mediaSession.setActionHandler('play',          () => { startStream(activeIdRef.current) })
-    navigator.mediaSession.setActionHandler('pause',         () => { stopStream() })
+    navigator.mediaSession.setActionHandler('play', () => {
+      userWantsPlaybackRef.current = true
+      startStream(activeIdRef.current)
+    })
+    navigator.mediaSession.setActionHandler('pause', () => { stopStream() })
     navigator.mediaSession.setActionHandler('previoustrack', () => {
       const idx  = LOCATIONS.findIndex((l) => l.id === activeIdRef.current)
       const prev = LOCATIONS[(idx - 1 + LOCATIONS.length) % LOCATIONS.length]
@@ -392,10 +409,13 @@ export default function AudioPlayer({ initialId }: Props) {
   // ─── UI handlers ────────────────────────────────────────────────────────────
   const handleToggle = () => {
     if (playState === 'playing' || playState === 'loading') {
+      // Explicit stop/cancel — stopStream will clear userWantsPlaybackRef
       stopStream()
     } else {
-      lastAttemptedRef.current = ''
-      retryCountRef.current    = 0
+      // Covers idle AND error: express intent then start (or retry)
+      userWantsPlaybackRef.current = true
+      lastAttemptedRef.current     = ''
+      retryCountRef.current        = 0
       startStream(activeId)
     }
   }
@@ -403,12 +423,20 @@ export default function AudioPlayer({ initialId }: Props) {
   const handleLocationSelect = (id: string) => {
     track('location_select', id)
     setActiveId(id)
-    if (playState === 'playing' || playState === 'loading') startStream(id)
+    // Start/switch stream whenever the user has expressed listening intent —
+    // this covers playing, loading, AND error/offline states so one tap from
+    // the list or map is enough to recover without scrolling to the top.
+    if (userWantsPlaybackRef.current) {
+      retryCountRef.current    = 0
+      lastAttemptedRef.current = ''
+      startStream(id)
+    }
   }
 
   const handleRetryManual = () => {
-    lastAttemptedRef.current = ''
-    retryCountRef.current    = 0
+    userWantsPlaybackRef.current = true
+    lastAttemptedRef.current     = ''
+    retryCountRef.current        = 0
     startStream(activeId)
   }
 
