@@ -43,6 +43,13 @@ const LOAD_TIMEOUT = 15_000  // ms to wait for first audio data before retrying
                              // 15s covers Render cold-start (~3s) + ffmpeg spawn (~1s)
                              // + Icecast connect (~1s) + transcode buffer (~2s)
 
+// ─── Client-side stream debug logging ─────────────────────────────────────────
+// Set to false before shipping a release that doesn't need console noise.
+const DEBUG_STREAM_CLIENT = true
+function dbg(...args: unknown[]) {
+  if (DEBUG_STREAM_CLIENT) console.log('[audio]', ...args)
+}
+
 // ─── Sleep timer constants ─────────────────────────────────────────────────────
 const SLEEP_OPTIONS = [15, 30, 60, 90] as const
 const FADE_SECONDS  = 10   // seconds before end to begin volume fade
@@ -153,6 +160,7 @@ export default function AudioPlayer({ initialId }: Props) {
 
   // ─── Audio control ──────────────────────────────────────────────────────────
   const stopStream = useCallback(() => {
+    dbg('stopStream called')
     // Track play duration before tearing down
     if (playStartedAtRef.current !== null) {
       const dur = Math.round((Date.now() - playStartedAtRef.current) / 1_000)
@@ -179,6 +187,8 @@ export default function AudioPlayer({ initialId }: Props) {
   }, [])
 
   const startStream = useCallback((locationId: string) => {
+    dbg(`startStream  id=${locationId}`)
+
     clearTimeout(retryTimerRef.current)
     clearTimeout(loadTimerRef.current)
 
@@ -195,6 +205,7 @@ export default function AudioPlayer({ initialId }: Props) {
         playStartedAtRef.current   = null
         playingLocationRef.current = ''
       }
+      dbg(`destroyAudio  previous  id=${lastAttemptedRef.current}`)
       destroyAudio(audioRef.current)
       audioRef.current = null
     }
@@ -208,10 +219,21 @@ export default function AudioPlayer({ initialId }: Props) {
       [locationId]: isRetry ? 'reconnecting' : 'connecting',
     }))
 
-    const audio = new Audio(`/api/stream?id=${locationId}`)
+    const src   = `/api/stream?id=${locationId}`
+    const audio = new Audio(src)
     audio.preload = 'none'
+    dbg(`audio src assigned  id=${locationId}  src=${src}`)
 
-    function onFailure() {
+    // ── Tracks whether `playing` has fired at least once for this audio instance.
+    // Used to distinguish two very different situations for the `stalled` event:
+    //   • Before first play: the browser fires `stalled` after ~3 s of no data
+    //     while the server is still cold-starting/FFmpeg-spawning. This is NOT
+    //     a real failure — the `loadTimerRef` (15 s) is the correct timeout.
+    //   • After play starts: `stalled` genuinely means the live feed stopped.
+    let hasPlayed = false
+
+    function onFailure(reason: string) {
+      dbg(`onFailure  id=${locationId}  reason=${reason}  attempt=${retryCountRef.current + 1}`)
       clearTimeout(loadTimerRef.current)
       if (audioRef.current === audio) {
         destroyAudio(audio)
@@ -254,10 +276,17 @@ export default function AudioPlayer({ initialId }: Props) {
 
     loadTimerRef.current = setTimeout(() => {
       if (audioRef.current !== audio) return
-      onFailure()
+      dbg(`loadTimer fired  id=${locationId}  hasPlayed=${hasPlayed}`)
+      onFailure('load_timeout')
     }, LOAD_TIMEOUT)
 
+    const onLoadStart = () => {
+      dbg(`loadstart  id=${locationId}`)
+    }
+
     const onPlaying = () => {
+      hasPlayed = true
+      dbg(`playing  id=${locationId}`)
       clearTimeout(loadTimerRef.current)
       retryCountRef.current      = 0
       playStartedAtRef.current   = Date.now()
@@ -268,19 +297,50 @@ export default function AudioPlayer({ initialId }: Props) {
       track('play_start', locationId)
     }
 
-    const onWaiting = () => { setVisualizerActive(false) }
-    const onError   = () => { if (audioRef.current !== audio) return; onFailure() }
-    const onStalled = () => { if (audioRef.current !== audio) return; onFailure() }
+    const onWaiting = () => {
+      dbg(`waiting  id=${locationId}  hasPlayed=${hasPlayed}`)
+      setVisualizerActive(false)
+    }
 
-    audio.addEventListener('playing', onPlaying)
-    audio.addEventListener('waiting', onWaiting)
-    audio.addEventListener('error',   onError)
-    audio.addEventListener('stalled', onStalled)
+    const onError = () => {
+      if (audioRef.current !== audio) return
+      const code = audio.error?.code ?? 'unknown'
+      dbg(`error  id=${locationId}  code=${code}  hasPlayed=${hasPlayed}`)
+      onFailure(`audio_error_${code}`)
+    }
+
+    // `stalled` fires after ~3 s of no buffered data (browser-internal threshold).
+    // During cold-start loading this is expected — FFmpeg + network need time.
+    // ROOT CAUSE FIX: Do NOT call onFailure() here before first play.
+    // The 15 s loadTimerRef handles the real "nothing arrived" timeout.
+    // Only treat post-play stalls as failures — they mean the live feed died.
+    const onStalled = () => {
+      dbg(`stalled  id=${locationId}  hasPlayed=${hasPlayed}`)
+      if (audioRef.current !== audio) return
+      if (hasPlayed) {
+        // Genuine mid-stream stall: feed stopped after we were already live.
+        onFailure('stalled_after_play')
+      }
+      // Before first play: harmless browser eagerness — let loadTimerRef decide.
+    }
+
+    audio.addEventListener('loadstart', onLoadStart)
+    audio.addEventListener('playing',   onPlaying)
+    audio.addEventListener('waiting',   onWaiting)
+    audio.addEventListener('error',     onError)
+    audio.addEventListener('stalled',   onStalled)
 
     audioRef.current = audio
-    audio.play().catch(() => {
+    audio.play().catch((err: unknown) => {
       if (audioRef.current !== audio) return
-      onFailure()
+      const msg = err instanceof Error ? err.name : String(err)
+      dbg(`play() rejected  id=${locationId}  err=${msg}`)
+      // NotAllowedError = autoplay policy (needs user gesture, not a stream fault)
+      // AbortError      = audio was destroyed before play could start (intentional)
+      // Anything else   = real failure worth retrying
+      if (msg !== 'NotAllowedError' && msg !== 'AbortError') {
+        onFailure(`play_rejected_${msg}`)
+      }
     })
   }, [])
 
